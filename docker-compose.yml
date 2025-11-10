@@ -1,0 +1,40 @@
+# Updated docker-compose.yml
+
+version: '3.8'
+services:
+  # 1. LocalStack Service
+  localstack:
+    container_name: localstack_image_api
+    image: localstack/localstack:latest
+    ports:
+      - "4566:4566" # S3 endpoint
+      - "8080:8080" # Web UI (if needed)
+    environment:
+      - SERVICES=s3
+      - DEBUG=1
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+    # Ensure localstack starts first
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  # 2. Flask Application Service
+  image-api:
+    build: . # Tells Docker Compose to build from the Dockerfile in the current directory
+    container_name: image_api_flask
+    ports:
+      - "5000:5000" # Expose the Flask app port
+    environment:
+      # Inject the LocalStack URL so the Flask app can connect to S3
+      - LOCALSTACK_ENDPOINT_URL=http://localstack:4566 
+      - S3_BUCKET_NAME=image-storage-bucket
+    # Wait for LocalStack to be healthy before starting the API
+    depends_on:
+      localstack:
+        condition: service_healthy

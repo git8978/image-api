@@ -1,0 +1,5 @@
+Flask==2.3.3
+boto3==1.28.62
+werkzeug==2.3.7
+pytest
+moto[s3]
